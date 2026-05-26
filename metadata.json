@@ -1,0 +1,6 @@
+{
+  "name": "Alerta de Servicios Brandsen",
+  "description": "Sistema de alerta temprana y reporte de incidencias urbanas para Coronel Brandsen",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
