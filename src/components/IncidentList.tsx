@@ -191,21 +191,26 @@ export default function IncidentList({
                 }`}
               >
                 {/* ID and Status Row */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-mono text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded border border-slate-200">
+                <div className="flex items-center justify-between gap-2 flex-wrap sm:flex-nowrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono text-[9px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded border border-slate-200 shrink-0">
                       ID: {report.id}
                     </span>
                     {report.locality && (
-                      <span className="text-[9px] bg-brand-50 text-brand-700 font-extrabold px-1.5 py-0.5 rounded-full border border-brand-200">
+                      <span className="text-[9px] bg-brand-50 text-brand-700 font-extrabold px-1.5 py-0.5 rounded-full border border-brand-200 shrink-0">
                         📍 {report.locality}
                       </span>
                     )}
-                    <span className="text-[11px] font-bold text-slate-800 font-display flex items-center gap-1">
-                      {getCategoryEmoji(report.category)} {report.category}
-                    </span>
                   </div>
-                  {getStatusBadge(report.status)}
+                  <div className="shrink-0 my-0.5">
+                    {getStatusBadge(report.status)}
+                  </div>
+                </div>
+
+                {/* Category Title - Placed boldly on its own row above description to guarantee it never overflows */}
+                <div className="text-[11px] md:text-xs font-bold text-slate-800 font-display flex items-center gap-1.5 mt-2 bg-slate-50/50 py-1 px-1.5 rounded-lg border border-slate-100/50 w-fit">
+                  <span>{getCategoryEmoji(report.category)}</span>
+                  <span>{report.category}</span>
                 </div>
 
                 {/* Subtext info */}
