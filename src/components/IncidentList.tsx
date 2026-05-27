@@ -42,33 +42,62 @@ export default function IncidentList({
     setExpandedId(expandedId === id ? null : id);
   };
 
-  const getStatusBadge = (status: IncidentStatus) => {
+  const getStatusBadge = (status: IncidentStatus, index: number) => {
+    const customStyle: React.CSSProperties = {
+      paddingLeft: '0px',
+      paddingTop: '0px',
+      marginLeft: index === 0 ? '-50px' : '0px',
+      marginRight: '0px',
+      marginTop: '-34px',
+      marginBottom: '0px',
+      paddingBottom: '0px',
+      paddingRight: '0px',
+      width: '111.2344px',
+      height: '30px',
+      textAlign: 'center',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    };
+
     switch (status) {
       case 'Reportado':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+          <span 
+            style={customStyle}
+            className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse shrink-0"></span>
             Reportado
           </span>
         );
       case 'En Revisión':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+          <span 
+            style={customStyle}
+            className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
             En Revisión
           </span>
         );
       case 'En Cuadrilla':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          <span 
+            style={customStyle}
+            className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0"></span>
             En Cuadrilla
           </span>
         );
       case 'Cerrado':
         return (
-          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+          <span 
+            style={customStyle}
+            className="inline-flex items-center gap-1.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
             Resuelto
           </span>
         );
@@ -175,7 +204,7 @@ export default function IncidentList({
             <p className="text-[10px] text-slate-400">Intentá ampliar criterios o iniciá un nuevo aviso!</p>
           </div>
         ) : (
-          reports.map((report) => {
+          reports.map((report, idx) => {
             const isSelected = selectedReport?.id === report.id;
             const isExpanded = expandedId === report.id;
             const dateStr = new Date(report.createdAt).toLocaleDateString();
@@ -203,7 +232,7 @@ export default function IncidentList({
                     )}
                   </div>
                   <div className="shrink-0 my-0.5">
-                    {getStatusBadge(report.status)}
+                    {getStatusBadge(report.status, idx)}
                   </div>
                 </div>
 

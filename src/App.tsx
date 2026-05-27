@@ -5,6 +5,7 @@ import MapComponent from './components/MapComponent';
 import ReportForm from './components/ReportForm';
 import IncidentList from './components/IncidentList';
 import AdminPanel from './components/AdminPanel';
+import AdminClaimsTable from './components/AdminClaimsTable';
 import { PlusCircle, HelpCircle, MapPin, CheckCircle2, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
 import { getApiUrl } from './api';
 import { db, auth, handleFirestoreError, OperationType } from './firebase';
@@ -576,48 +577,26 @@ export default function App() {
             {/* LEFT / CENTER COLUMN: Geographic Map (Spans 7 Cols) */}
             <div className="lg:col-span-7 space-y-6">
               
-              {/* Main Map Box Header styling */}
-              <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
-                <div>
-                  <h2 className="text-lg md:text-xl font-bold font-display text-slate-900 flex items-center gap-1.5">
-                    <span>Mapa de Alerta Temprana</span>
-                    <span className="bg-brand-50 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-brand-200/50">
-                      C. Brandsen
-                    </span>
-                  </h2>
-                  <p className="text-xs text-slate-500 leading-tight">
-                    Hacé clic en cualquier punto del mapa para fijar una incidencia urbana.
-                  </p>
+              {activeTab === 'admin' && adminUser.isAuthenticated && (
+                <AdminClaimsTable
+                  reports={reports}
+                  selectedReport={selectedReport}
+                  onSelectReport={setSelectedReport}
+                />
+              )}
+              
+              {/* Informative helper ABOVE the map */}
+              {!(activeTab === 'admin' && adminUser.isAuthenticated) && (
+                <div className="p-6 bg-slate-900 text-white rounded-3xl flex items-start gap-4 text-left shadow-lg animate-fadeIn">
+                  <HelpCircle size={20} className="text-brand-400 mt-0.5 shrink-0" />
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-white font-display">¿Cómo funciona la Alerta Temprana de Servicios?</h4>
+                    <p className="text-xs text-slate-305 leading-relaxed">
+                      Los reportes vecinales agilizan la detección de luminarias rotas, baches peligrosos, ramas caídas o cables colgantes. Los inspectores gestionan la respuesta directamente en sus dispositivos y las cuadrillas operativas actualizan el estado a la comunidad de forma transparente.
+                    </p>
+                  </div>
                 </div>
-
-                {!isReportingMode && (
-                  <button
-                    onClick={() => {
-                      const LOCALITY_COORDS: { [key: string]: { lat: number; lng: number } } = {
-                        'Brandsen': { lat: -35.1685, lng: -58.2323 },
-                        'Gómez': { lat: -35.0664, lng: -58.3846 },
-                        'Jeppener': { lat: -35.2758, lng: -58.1965 },
-                        'Altamirano': { lat: -35.3411, lng: -58.1472 },
-                        'Samborombón': { lat: -35.1950, lng: -58.1054 },
-                        'Oliden': { lat: -35.1542, lng: -57.9408 },
-                        'Las Acacias': { lat: -35.1995, lng: -58.2580 }
-                      };
-                      const userLoc = neighborSession?.locality || 'Brandsen';
-                      const coords = LOCALITY_COORDS[userLoc] || LOCALITY_COORDS['Brandsen'];
-                      setIsReportingMode(true);
-                      setReportLocation({
-                        lat: coords.lat,
-                        lng: coords.lng,
-                        address: `Centro de ${userLoc}, Partido de Coronel Brandsen`,
-                      });
-                    }}
-                    className="bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition-all shadow hover:shadow-md flex items-center gap-2 self-start sm:self-auto active:scale-95 cursor-pointer"
-                  >
-                    <PlusCircle size={14} />
-                    <span>Reportar Incidencia</span>
-                  </button>
-                )}
-              </div>
+              )}
 
               {/* Leaflet interactive board */}
               <MapComponent
@@ -632,17 +611,6 @@ export default function App() {
                 isReportingMode={isReportingMode}
                 isNeighborVerified={!!neighborSession?.verified}
               />
-
-              {/* Informative footer helper */}
-              <div className="p-6 bg-slate-900 text-white rounded-3xl flex items-start gap-4 text-left shadow-lg">
-                <HelpCircle size={20} className="text-brand-400 mt-0.5 shrink-0" />
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-white font-display">¿Cómo funciona la Alerta Temprana de Servicios?</h4>
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    Los reportes vecinales agilizan la detección de luminarias rotas, baches peligrosos, ramas caídas o cables colgantes. Los inspectores gestionan la respuesta directamente en sus dispositivos y las cuadrillas operativas actualizan el estado a la comunidad de forma transparente.
-                  </p>
-                </div>
-              </div>
             </div>
 
             {/* RIGHT SIDEBAR COLUMN: contextual actions (Spans 5 de 12 Cols) */}
@@ -671,13 +639,61 @@ export default function App() {
                   onUpdateReportStatus={handleUpdateReportStatus}
                 />
               ) : (
-                <IncidentList
-                  reports={reports}
-                  selectedReport={selectedReport}
-                  onSelectReport={setSelectedReport}
-                  filters={filters}
-                  onChangeFilters={setFilters}
-                />
+                <div className="space-y-4 animate-fadeIn">
+                  {/* Reporting incident option ABOVE the recent claims list */}
+                  <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 space-y-4 text-left">
+                    <div className="flex items-start gap-3">
+                      <div className="p-2.5 bg-brand-50 text-brand-700 rounded-2xl border border-brand-100 shrink-0 mt-0.5">
+                        <PlusCircle size={20} />
+                      </div>
+                      <div>
+                        <h3 className="text-base font-bold font-display text-slate-900 flex items-center gap-1.5 flex-wrap">
+                          <span>Mapa de Alerta Temprana</span>
+                          <span className="bg-brand-50 text-brand-700 text-[10px] font-bold px-2 py-0.5 rounded-full border border-brand-200/50">
+                            C. Brandsen
+                          </span>
+                        </h3>
+                        <p className="text-xs text-slate-500 leading-relaxed mt-1.5">
+                          Hacé clic en cualquier punto del mapa para fijar una incidencia urbana o presioná el botón de abajo para ingresar un nuevo reporte detallado.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        const LOCALITY_COORDS: { [key: string]: { lat: number; lng: number } } = {
+                          'Brandsen': { lat: -35.1685, lng: -58.2323 },
+                          'Gómez': { lat: -35.0664, lng: -58.3846 },
+                          'Jeppener': { lat: -35.2758, lng: -58.1965 },
+                          'Altamirano': { lat: -35.3411, lng: -58.1472 },
+                          'Samborombón': { lat: -35.1950, lng: -58.1054 },
+                          'Oliden': { lat: -35.1542, lng: -57.9408 },
+                          'Las Acacias': { lat: -35.1995, lng: -58.2580 }
+                        };
+                        const userLoc = neighborSession?.locality || 'Brandsen';
+                        const coords = LOCALITY_COORDS[userLoc] || LOCALITY_COORDS['Brandsen'];
+                        setIsReportingMode(true);
+                        setReportLocation({
+                          lat: coords.lat,
+                          lng: coords.lng,
+                          text: `Centro de ${userLoc}, Partido de Coronel Brandsen`,
+                          address: `Centro de ${userLoc}, Partido de Coronel Brandsen`,
+                        });
+                      }}
+                      className="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs py-3 rounded-2xl transition-all shadow-sm hover:shadow-md flex items-center justify-center gap-2 active:scale-98 cursor-pointer"
+                    >
+                      <PlusCircle size={14} />
+                      <span>Reportar Incidencia</span>
+                    </button>
+                  </div>
+
+                  <IncidentList
+                    reports={reports}
+                    selectedReport={selectedReport}
+                    onSelectReport={setSelectedReport}
+                    filters={filters}
+                    onChangeFilters={setFilters}
+                  />
+                </div>
               )}
             </div>
           </div>

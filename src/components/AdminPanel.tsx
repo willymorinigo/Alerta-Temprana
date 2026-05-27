@@ -326,46 +326,110 @@ export default function AdminPanel({
           {/* Upper overview stats grids */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {/* KPI 1 */}
-            <div className="bg-white rounded-xl border border-slate-200/60 p-3.5 text-left flex items-center gap-3">
-              <div className="p-2.5 bg-slate-100 text-slate-600 rounded-lg">
-                <Activity size={18} />
+            <div 
+              style={{ backgroundColor: '#a0baee' }}
+              className="rounded-xl border border-slate-200/60 p-3 flex flex-col items-center justify-center text-center gap-1.5 min-w-0"
+            >
+              <div 
+                style={{ borderWidth: '2px', borderColor: '#1459cf' }}
+                className="p-2 bg-slate-100 text-slate-600 rounded-lg shrink-0"
+              >
+                <Activity size={16} style={{ color: '#1459cf' }} />
               </div>
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Recibidos</div>
-                <div className="text-xl font-black text-slate-900 font-mono">{stats.total}</div>
+              <div className="w-full min-w-0">
+                <div 
+                  style={{ fontSize: '9px', color: '#ffffff' }}
+                  className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis"
+                >
+                  Total Recibidos
+                </div>
+                <div 
+                  style={{ color: '#ffffff' }}
+                  className="text-lg font-black font-mono mt-0.5"
+                >
+                  {stats.total}
+                </div>
               </div>
             </div>
 
             {/* KPI 2 */}
-            <div className="bg-white rounded-xl border border-slate-200/60 p-3.5 text-left flex items-center gap-3">
-              <div className="p-2.5 bg-red-50 text-red-600 rounded-lg">
-                <AlertTriangle size={18} />
+            <div 
+              style={{ backgroundColor: '#ff4f4f' }}
+              className="rounded-xl border border-slate-200/60 p-3 flex flex-col items-center justify-center text-center gap-1.5 min-w-0"
+            >
+              <div 
+                style={{ borderWidth: '2px' }}
+                className="p-2 bg-red-50 text-red-600 rounded-lg shrink-0"
+              >
+                <AlertTriangle size={16} />
               </div>
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Sin Asignar</div>
-                <div className="text-xl font-black text-slate-900 font-mono">{stats.reportado}</div>
+              <div className="w-full min-w-0">
+                <div 
+                  style={{ fontSize: '9px', color: '#ffffff' }}
+                  className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis"
+                >
+                  Sin Asignar
+                </div>
+                <div 
+                  style={{ color: '#ffffff' }}
+                  className="text-lg font-black font-mono mt-0.5"
+                >
+                  {stats.reportado}
+                </div>
               </div>
             </div>
 
             {/* KPI 3 */}
-            <div className="bg-white rounded-xl border border-slate-200/60 p-3.5 text-left flex items-center gap-3">
-              <div className="p-2.5 bg-brand-50 text-brand-600 rounded-lg">
-                <MessageSquare size={18} />
+            <div 
+              style={{ backgroundColor: '#ed8f2c' }}
+              className="rounded-xl border border-slate-200/60 p-3 flex flex-col items-center justify-center text-center gap-1.5 min-w-0"
+            >
+              <div 
+                style={{ borderWidth: '2px', borderColor: '#d68914' }}
+                className="p-2 bg-brand-50 text-brand-600 rounded-lg shrink-0"
+              >
+                <MessageSquare size={16} style={{ color: '#eb9d25' }} />
               </div>
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">En Cuadrilla</div>
-                <div className="text-xl font-black text-slate-900 font-mono">{stats.cuadrilla}</div>
+              <div className="w-full min-w-0">
+                <div 
+                  style={{ fontSize: '9px', color: '#ffffff' }}
+                  className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis"
+                >
+                  En Cuadrilla
+                </div>
+                <div 
+                  style={{ color: '#ffffff' }}
+                  className="text-lg font-black font-mono mt-0.5"
+                >
+                  {stats.cuadrilla}
+                </div>
               </div>
             </div>
 
             {/* KPI 4 */}
-            <div className="bg-white rounded-xl border border-slate-200/60 p-3.5 text-left flex items-center gap-3">
-              <div className="p-2.5 bg-emerald-50 text-emerald-600 rounded-lg">
-                <CheckCircle2 size={18} />
+            <div 
+              style={{ backgroundColor: '#38cc4b' }}
+              className="rounded-xl border border-slate-200/60 p-3 flex flex-col items-center justify-center text-center gap-1.5 min-w-0"
+            >
+              <div 
+                style={{ borderWidth: '2px', borderColor: '#009966' }}
+                className="p-2 bg-emerald-50 text-emerald-600 rounded-lg shrink-0"
+              >
+                <CheckCircle2 size={16} />
               </div>
-              <div>
-                <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Cerrados Ok</div>
-                <div className="text-xl font-black text-slate-900 font-mono">{stats.cerrado}</div>
+              <div className="w-full min-w-0">
+                <div 
+                  style={{ fontSize: '9px', color: '#ffffff' }}
+                  className="text-[10px] font-bold uppercase tracking-wider whitespace-nowrap overflow-hidden text-ellipsis"
+                >
+                  Cerrados Ok
+                </div>
+                <div 
+                  style={{ color: '#ffffff' }}
+                  className="text-lg font-black font-mono mt-0.5"
+                >
+                  {stats.cerrado}
+                </div>
               </div>
             </div>
           </div>

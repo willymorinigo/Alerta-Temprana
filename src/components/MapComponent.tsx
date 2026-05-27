@@ -328,7 +328,16 @@ export default function MapComponent({
   return (
     <div className="relative w-full h-[380px] md:h-[500px] bg-slate-200 rounded-3xl border border-slate-200 overflow-hidden shadow-sm flex flex-col">
       {/* Help Banner indicating mapping interactive instructions */}
-      <div className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[500] bg-slate-900/95 text-white text-[11px] px-4 py-2.5 rounded-full flex items-center gap-2 border border-slate-800 backdrop-blur-sm shadow-lg max-w-[90%] text-center">
+      <div 
+        className="absolute top-3 left-1/2 transform -translate-x-1/2 z-[500] bg-slate-900/95 text-white text-[11px] px-4 py-2.5 rounded-full flex items-center gap-2 border border-slate-800 backdrop-blur-sm shadow-lg max-w-[90%] text-center"
+        style={{
+          paddingRight: '16px',
+          marginLeft: '0px',
+          paddingTop: '10px',
+          paddingLeft: '22px',
+          marginRight: '-62px',
+        }}
+      >
         <MapPin size={13} className="text-brand-400 shrink-0 animate-bounce" />
         <span className="font-semibold text-slate-200">
           {isReportingMode 
