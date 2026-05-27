@@ -9,6 +9,17 @@ const DB_FILE = path.join(process.cwd(), 'reports-database.json');
 
 app.use(express.json({ limit: '10mb' }));
 
+// Enable CORS so external deploy static frontends (like Vercel) can talk to this backend
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
 // Initial mock data centered in Coronel Brandsen (-35.168, -58.232)
 const INITIAL_REPORTS: IncidentReport[] = [
   {

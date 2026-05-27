@@ -6,6 +6,7 @@ import ReportForm from './components/ReportForm';
 import IncidentList from './components/IncidentList';
 import AdminPanel from './components/AdminPanel';
 import { PlusCircle, HelpCircle, MapPin, CheckCircle2, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
+import { getApiUrl } from './api';
 
 export default function App() {
   // Global claims state
@@ -73,7 +74,7 @@ export default function App() {
       if (filters.locality && filters.locality !== 'Todas') queryParams.append('locality', filters.locality);
       if (filters.searchQuery) queryParams.append('query', filters.searchQuery);
 
-      const resp = await fetch(`/api/reports?${queryParams.toString()}`);
+      const resp = await fetch(getApiUrl(`/api/reports?${queryParams.toString()}`));
       if (resp.ok) {
         const data = await resp.json();
         setReports(data);
@@ -107,7 +108,7 @@ export default function App() {
     photoUrl?: string;
     locality?: string;
   }) => {
-    const resp = await fetch('/api/reports', {
+    const resp = await fetch(getApiUrl('/api/reports'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(data),
@@ -139,7 +140,7 @@ export default function App() {
 
   // Update incident status from the Admin Control Tower
   const handleUpdateReportStatus = async (id: string, newStatus: IncidentStatus, comment: string) => {
-    const resp = await fetch(`/api/reports/${id}`, {
+    const resp = await fetch(getApiUrl(`/api/reports/${id}`), {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ status: newStatus, internalComment: comment }),

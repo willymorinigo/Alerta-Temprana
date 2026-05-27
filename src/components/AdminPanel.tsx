@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { AdminUser, IncidentReport, IncidentStatus } from '../types';
 import { Lock, FileText, CheckCircle2, AlertTriangle, ShieldCheck, UserCheck, MessageSquare, PlusCircle, Activity, Lightbulb, Users, Search } from 'lucide-react';
+import { getApiUrl } from '../api';
 
 interface AdminPanelProps {
   adminUser: AdminUser;
@@ -108,7 +109,7 @@ export default function AdminPanel({
     setLoginLoading(true);
 
     try {
-      const response = await fetch('/api/admin/login', {
+      const response = await fetch(getApiUrl('/api/admin/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
