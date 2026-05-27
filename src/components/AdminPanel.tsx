@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { AdminUser, IncidentReport, IncidentStatus } from '../types';
 import { Lock, FileText, CheckCircle2, AlertTriangle, ShieldCheck, UserCheck, MessageSquare, PlusCircle, Activity, Lightbulb, Users, Search } from 'lucide-react';
 import { getApiUrl } from '../api';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth } from '../firebase';
 
 interface AdminPanelProps {
   adminUser: AdminUser;
@@ -109,36 +111,64 @@ export default function AdminPanel({
     setLoginLoading(true);
 
     try {
-      const response = await fetch(getApiUrl('/api/admin/login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
-      });
+      if (username.includes('@')) {
+        // Real-world Firebase Authentication login
+        const credential = await signInWithEmailAndPassword(auth, username, password);
+        const user = credential.user;
+        const email = user.email || '';
+        const role = email === 'willymorinigo@gmail.com'
+          ? 'Coordinador General de Servicios (Master)'
+          : 'Coordinador Municipal Autenticado (Vía Firebase)';
 
-      const resData = await response.json();
-
-      if (response.ok && resData.success) {
         onLoginSuccess({
-          username: resData.username,
-          role: resData.role,
+          username: user.displayName || email.split('@')[0] || 'admin',
+          role: role,
           isAuthenticated: true,
         });
       } else {
-        setLoginError(resData.error || 'Credenciales inválidas.');
+        // Fallback or simulated server API integration
+        try {
+          const response = await fetch(getApiUrl('/api/admin/login'), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, password }),
+          });
+
+          const resData = await response.json();
+
+          if (response.ok && resData.success) {
+            onLoginSuccess({
+              username: resData.username,
+              role: resData.role,
+              isAuthenticated: true,
+            });
+          } else {
+            setLoginError(resData.error || 'Credenciales inválidas.');
+          }
+        } catch (serverErr) {
+          // Dry mock fallback if connection fails
+          if (username === 'admin' && password === 'brandsen2026') {
+            onLoginSuccess({
+              username: 'admin (Local Demo)',
+              role: 'Coordinador General de Servicios (Local)',
+              isAuthenticated: true,
+            });
+          } else {
+            setLoginError('Error de red al autenticar. Para usar Firebase ingresá tu email de Coordinador. Para probar en modo offline, usá "admin" y "brandsen2026".');
+          }
+        }
       }
-    } catch (err) {
-      console.warn('Fallo de red al autenticar en el servidor de producción. Iniciando validación offline demo:', err);
-      
-      // Allow demo login offline if credentials match the simulation credentials
-      if (username === 'admin' && password === 'brandsen2026') {
-        onLoginSuccess({
-          username: 'admin (Local Demo)',
-          role: 'Coordinador General de Servicios (Local)',
-          isAuthenticated: true,
-        });
-      } else {
-        setLoginError('Error de red al autenticar. Para probar el panel municipal de forma offline, usá el usuario "admin" y clave "brandsen2026".');
+    } catch (firebaseErr: any) {
+      console.error('Firebase Auth error:', firebaseErr);
+      let errorMsg = 'Error al ingresar. Verificá tu correo y contraseña en Firebase Auth.';
+      if (firebaseErr.code === 'auth/wrong-password' || firebaseErr.code === 'auth/user-not-found' || firebaseErr.code === 'auth/invalid-credential') {
+        errorMsg = 'Email o contraseña incorrectos en Firebase.';
+      } else if (firebaseErr.code === 'auth/invalid-email') {
+        errorMsg = 'Formato de correo electrónico inválido.';
+      } else if (firebaseErr.code === 'auth/network-request-failed') {
+        errorMsg = 'No se pudo conectar a los servidores de Firebase. Comprobá tu internet.';
       }
+      setLoginError(errorMsg);
     } finally {
       setLoginLoading(false);
     }
@@ -205,12 +235,14 @@ export default function AdminPanel({
 
         <form onSubmit={handleLoginSubmit} className="space-y-4">
           <div className="space-y-1">
-            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">Usuario Admin</label>
+            <label className="block text-[11px] font-bold text-slate-600 uppercase tracking-wider">
+              Usuario o Correo de Firebase
+            </label>
             <input
               type="text"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              placeholder="admin"
+              placeholder="coordinador@brandsen.gov.ar"
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:ring-2 focus:ring-brand-500 focus:bg-white"
               required
             />
@@ -238,16 +270,19 @@ export default function AdminPanel({
         </form>
 
         {/* Demo Helper Panel with preconfigured passwords */}
-        <div className="bg-brand-50 rounded-2xl p-3.5 text-[11px] border border-brand-100 text-brand-800 space-y-1 leading-relaxed">
-          <div className="font-bold flex items-center gap-1">
-            <Lightbulb size={12} />
-            <span>Credenciales de Testeo (Prueba Rápida):</span>
+        <div className="bg-brand-50 rounded-2xl p-3.5 text-[11px] border border-brand-100 text-brand-850 space-y-1.5 leading-relaxed">
+          <div className="font-bold flex items-center gap-1 text-brand-900">
+            <Lightbulb size={13} />
+            <span>Acceso de Coordinadores Municipales:</span>
           </div>
           <div>
-            • <strong>Usuario:</strong> <code className="bg-white/60 px-1 py-0.2 rounded select-all font-mono">admin</code>
+            • <strong>Prueba Rápida (Offline):</strong> Usá <code className="bg-white/60 px-1 py-0.2 rounded select-all font-mono">admin</code> y contraseña <code className="bg-white/60 px-1 py-0.2 rounded select-all font-mono">brandsen2026</code>.
           </div>
-          <div>
-            • <strong>Contraseña:</strong> <code className="bg-white/60 px-1 py-0.2 rounded select-all font-mono">brandsen2026</code>
+          <div className="border-t border-brand-200/50 my-1 py-1">
+            • <strong>Firebase Auth (Producción):</strong> Registrá a tus coordinadores municipales desde la consola de proyectos con el correo institucional. El correo de inicialización master ya está habilitado:
+            <div className="mt-1 bg-white/60 p-1.5 rounded font-mono select-all text-[10px] break-all leading-tight">
+              Email: willymorinigo@gmail.com
+            </div>
           </div>
         </div>
       </div>

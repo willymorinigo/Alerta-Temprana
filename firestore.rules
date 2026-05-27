@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 1. Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Reusable general helpers
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isMetadataAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == "willymorinigo@gmail.com" &&
+        request.auth.token.email_verified == true
+      );
+    }
+
+    function isAdmin() {
+      return isMetadataAdmin() || (
+        isSignedIn() &&
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // Reports matching block
+    match /reports/{reportId} {
+      // Neighbors can find existing service alerts on the map and check status
+      allow read: if true;
+
+      // Neighbors and admins can register a report
+      allow create: if isValidReport(request.resource.data);
+
+      // Only admins can update reports to change status and append internal coordination notes
+      allow update: if isAdmin() && 
+        isValidReport(request.resource.data) &&
+        request.resource.data.lat == resource.data.lat &&
+        request.resource.data.lng == resource.data.lng &&
+        request.resource.data.createdAt == resource.data.createdAt &&
+        (!resource.data.keys().hasAll(['neighborName']) || request.resource.data.neighborName == resource.data.neighborName) &&
+        (!resource.data.keys().hasAll(['neighborPhone']) || request.resource.data.neighborPhone == resource.data.neighborPhone) &&
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'updatedAt', 'internalComments']);
+
+      // Nobody is allowed to delete reported incidents via client SDK (requires manual database pruning if needed)
+      allow delete: if false;
+    }
+
+    // Municipal Coordinators matching block
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isMetadataAdmin();
+    }
+
+    // Report properties validation schema
+    function isValidReport(data) {
+      return data.category is string &&
+        data.category.size() <= 64 &&
+        (data.category == 'Luminaria rota' || 
+         data.category == 'Bache' || 
+         data.category == 'Árbol caído' || 
+         data.category == 'Cable cortado' || 
+         data.category == 'Residuos especiales' || 
+         data.category == 'Otro') &&
+        data.description is string &&
+        data.description.size() <= 2000 &&
+        data.lat >= -90 && data.lat <= 90 &&
+        data.lng >= -180 && data.lng <= 180 &&
+        data.address is string &&
+        data.address.size() <= 500 &&
+        data.status is string &&
+        (data.status == 'Reportado' || 
+         data.status == 'En Revisión' || 
+         data.status == 'En Cuadrilla' || 
+         data.status == 'Cerrado');
+    }
+  }
+}

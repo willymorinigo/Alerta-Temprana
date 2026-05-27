@@ -7,6 +7,9 @@ import IncidentList from './components/IncidentList';
 import AdminPanel from './components/AdminPanel';
 import { PlusCircle, HelpCircle, MapPin, CheckCircle2, ShieldAlert, ArrowRight, Loader2 } from 'lucide-react';
 import { getApiUrl } from './api';
+import { db, auth, handleFirestoreError, OperationType } from './firebase';
+import { collection, doc, getDocs, setDoc, updateDoc, query, orderBy } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const FALLBACK_REPORTS: IncidentReport[] = [
   {
@@ -137,6 +140,36 @@ export default function App() {
     }
   }, [neighborSession]);
 
+  // Firebase auth state synchronizer
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const email = user.email || '';
+        const role = email === 'willymorinigo@gmail.com'
+          ? 'Coordinador General de Servicios (Master)'
+          : 'Coordinador Municipal Autenticado (Vía Firebase)';
+        setAdminUser({
+          username: user.displayName || email.split('@')[0] || 'admin',
+          role: role,
+          isAuthenticated: true,
+        });
+      } else {
+        // Prevent clearing the simulated admin if mock admin is logged in (keeps backwards compatibility)
+        setAdminUser(prev => {
+          if (prev.isAuthenticated && !prev.username.includes('(Vía Firebase)') && !prev.username.includes('(Master)')) {
+            return prev;
+          }
+          return {
+            username: '',
+            role: '',
+            isAuthenticated: false,
+          };
+        });
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
   // Neighbor search filter criteria
   const [filters, setFilters] = useState<IncidentFilters>({
     status: 'Todos',
@@ -152,29 +185,59 @@ export default function App() {
   const fetchReports = useCallback(async () => {
     try {
       setLoading(true);
-      const queryParams = new URLSearchParams();
-      if (filters.status !== 'Todos') queryParams.append('status', filters.status);
-      if (filters.category !== 'Todas') queryParams.append('category', filters.category);
-      if (filters.locality && filters.locality !== 'Todas') queryParams.append('locality', filters.locality);
-      if (filters.searchQuery) queryParams.append('query', filters.searchQuery);
-
-      const resp = await fetch(getApiUrl(`/api/reports?${queryParams.toString()}`));
-      if (resp.ok) {
-        const data = await resp.json();
-        setReports(data);
-        setIsOfflineMode(false);
-        // Persist local storage cache for backup offline presentations
-        localStorage.setItem('brandsen_reports_cache', JSON.stringify(data));
-        
-        // Auto-select first loaded report to center map if none is selected yet
-        if (data.length > 0 && !selectedReport) {
-          setSelectedReport(data[0]);
+      
+      // Retrieve reports directly from Cloud Firestore
+      const reportsCollection = collection(db, 'reports');
+      const snapshot = await getDocs(reportsCollection);
+      
+      let data: IncidentReport[] = [];
+      snapshot.forEach(docSnap => {
+        data.push({ id: docSnap.id, ...docSnap.data() } as IncidentReport);
+      });
+      
+      // Auto-populate default mock incidents if database is initialized for the first time
+      if (data.length === 0) {
+        console.log('Iniciando base de datos Firestore por primera vez...');
+        for (const report of FALLBACK_REPORTS) {
+          const docRef = doc(db, 'reports', report.id);
+          await setDoc(docRef, report);
         }
-      } else {
-        throw new Error('API server returned error code ' + resp.status);
+        data = [...FALLBACK_REPORTS];
       }
-    } catch (err) {
-      console.warn('Fallo de conexión al backend. Iniciando modo demostrativo local (offline/static):', err);
+
+      // Sort by newest first
+      data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+      // Apply filters locally in real-time
+      let filtered = [...data];
+      if (filters.status !== 'Todos') {
+        filtered = filtered.filter(r => r.status === filters.status);
+      }
+      if (filters.category !== 'Todas') {
+        filtered = filtered.filter(r => r.category === filters.category);
+      }
+      if (filters.locality && filters.locality !== 'Todas') {
+        filtered = filtered.filter(r => r.locality === filters.locality);
+      }
+      if (filters.searchQuery) {
+        const queryStr = filters.searchQuery.toLowerCase();
+        filtered = filtered.filter(r => 
+          r.description.toLowerCase().includes(queryStr) || 
+          r.category.toLowerCase().includes(queryStr) || 
+          (r.address && r.address.toLowerCase().includes(queryStr)) ||
+          (r.locality && r.locality.toLowerCase().includes(queryStr))
+        );
+      }
+      
+      setReports(filtered);
+      setIsOfflineMode(false);
+      localStorage.setItem('brandsen_reports_cache', JSON.stringify(data));
+      
+      if (filtered.length > 0 && !selectedReport) {
+        setSelectedReport(filtered[0]);
+      }
+    } catch (err: any) {
+      console.warn('Fallo de conexión directa a Firebase Firestore o reglas bloqueantes. Usando demo local offline:', err);
       setIsOfflineMode(true);
       
       // Load fallback from localStorage cache or use hardcoded sample data
@@ -190,6 +253,9 @@ export default function App() {
         localData = FALLBACK_REPORTS;
       }
       
+      // Sort by newest first
+      localData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
       // Apply filters locally in localStorage mode to maintain perfect UX on Vercel
       let filtered = [...localData];
       if (filters.status !== 'Todos') {
@@ -202,12 +268,12 @@ export default function App() {
         filtered = filtered.filter(r => r.locality === filters.locality);
       }
       if (filters.searchQuery) {
-        const query = filters.searchQuery.toLowerCase();
+        const queryStr = filters.searchQuery.toLowerCase();
         filtered = filtered.filter(r => 
-          r.description.toLowerCase().includes(query) || 
-          r.category.toLowerCase().includes(query) || 
-          (r.address && r.address.toLowerCase().includes(query)) ||
-          r.locality.toLowerCase().includes(query)
+          r.description.toLowerCase().includes(queryStr) || 
+          r.category.toLowerCase().includes(queryStr) || 
+          (r.address && r.address.toLowerCase().includes(queryStr)) ||
+          r.locality.toLowerCase().includes(queryStr)
         );
       }
       
@@ -238,37 +304,50 @@ export default function App() {
     locality?: string;
   }) => {
     try {
-      const resp = await fetch(getApiUrl('/api/reports'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data),
-      });
+      const generatedId = `rep-${Date.now()}`;
+      const newReport: IncidentReport = {
+        id: generatedId,
+        category: data.category,
+        description: data.description,
+        lat: Number(data.lat),
+        lng: Number(data.lng),
+        address: data.address || 'Dirección no especificada',
+        locality: data.locality || 'Brandsen',
+        status: 'Reportado',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        neighborName: data.neighborName || 'Vecino Anónimo',
+        neighborPhone: data.neighborPhone || '',
+        photoUrl: data.photoUrl || undefined,
+        internalComments: []
+      };
 
-      if (resp.ok) {
-        const newReport = await resp.json();
-        
-        // Add report to state list immediately, disable reporting mode, reset pins
-        setReports((prev) => [newReport, ...prev]);
-        setSelectedReport(newReport);
-        setReportLocation(null);
-        setIsReportingMode(false);
-        
-        // Back up to cache
-        try {
-          const cached = localStorage.getItem('brandsen_reports_cache');
-          const currentList = cached ? JSON.parse(cached) : [];
-          localStorage.setItem('brandsen_reports_cache', JSON.stringify([newReport, ...currentList]));
-        } catch (e) {
-          console.warn('Error archiving to cache:', e);
-        }
-
-        // Open success notifications
-        setSuccessSubmissionBanner(true);
-        setTimeout(() => setSuccessSubmissionBanner(false), 5000);
-        return;
-      } else {
-        throw new Error('API server returned ' + resp.status);
+      // Direct write to Cloud Firestore
+      try {
+        const docRef = doc(db, 'reports', generatedId);
+        await setDoc(docRef, newReport);
+      } catch (e) {
+        handleFirestoreError(e, OperationType.WRITE, `reports/${generatedId}`);
       }
+
+      // Add report to state list immediately, disable reporting mode, reset pins
+      setReports((prev) => [newReport, ...prev]);
+      setSelectedReport(newReport);
+      setReportLocation(null);
+      setIsReportingMode(false);
+      
+      // Back up to cache
+      try {
+        const cached = localStorage.getItem('brandsen_reports_cache');
+        const currentList = cached ? JSON.parse(cached) : [];
+        localStorage.setItem('brandsen_reports_cache', JSON.stringify([newReport, ...currentList]));
+      } catch (e) {
+        console.warn('Error archiving to cache:', e);
+      }
+
+      // Open success notifications
+      setSuccessSubmissionBanner(true);
+      setTimeout(() => setSuccessSubmissionBanner(false), 5000);
     } catch (err) {
       console.warn('Iniciando fallback local para creación de reporte por fallo de conexión/CORS:', err);
       // Simulate successful creation locally!
@@ -319,33 +398,44 @@ export default function App() {
   // Update incident status from the Admin Control Tower
   const handleUpdateReportStatus = async (id: string, newStatus: IncidentStatus, comment: string) => {
     try {
-      const resp = await fetch(getApiUrl(`/api/reports/${id}`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus, internalComment: comment }),
-      });
+      const matchedReport = reports.find(r => r.id === id);
+      const currentComments = matchedReport?.internalComments || [];
+      const updatedComments = comment ? [...currentComments, comment] : currentComments;
 
-      if (resp.ok) {
-        const updated = await resp.json();
-        
-        // Update reports list state
-        setReports((prev) => prev.map((r) => (r.id === id ? updated : r)));
-        setSelectedReport(updated);
+      const updatedReport: IncidentReport = {
+        ...(matchedReport || {} as IncidentReport),
+        id,
+        status: newStatus,
+        updatedAt: new Date().toISOString(),
+        internalComments: updatedComments
+      };
 
-        // Update in localStorage cache
-        try {
-          const cached = localStorage.getItem('brandsen_reports_cache');
-          if (cached) {
-            const currentList: IncidentReport[] = JSON.parse(cached);
-            const updatedList = currentList.map(r => r.id === id ? updated : r);
-            localStorage.setItem('brandsen_reports_cache', JSON.stringify(updatedList));
-          }
-        } catch (e) {
-          console.warn('Error updating cache:', e);
+      // Update directly in Cloud Firestore
+      try {
+        const docRef = doc(db, 'reports', id);
+        await updateDoc(docRef, {
+          status: newStatus,
+          updatedAt: new Date().toISOString(),
+          internalComments: updatedComments
+        });
+      } catch (e) {
+        handleFirestoreError(e, OperationType.UPDATE, `reports/${id}`);
+      }
+      
+      // Update reports list state
+      setReports((prev) => prev.map((r) => (r.id === id ? updatedReport : r)));
+      setSelectedReport(updatedReport);
+
+      // Update in localStorage cache
+      try {
+        const cached = localStorage.getItem('brandsen_reports_cache');
+        if (cached) {
+          const currentList: IncidentReport[] = JSON.parse(cached);
+          const updatedList = currentList.map(r => r.id === id ? updatedReport : r);
+          localStorage.setItem('brandsen_reports_cache', JSON.stringify(updatedList));
         }
-        return;
-      } else {
-        throw new Error('API server returned ' + resp.status);
+      } catch (e) {
+        console.warn('Error updating cache:', e);
       }
     } catch (err) {
       console.warn('Iniciando fallback local para actualización de reporte por fallo de conexión/CORS:', err);

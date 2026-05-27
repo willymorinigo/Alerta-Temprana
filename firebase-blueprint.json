@@ -1,0 +1,46 @@
+{
+  "entities": {
+    "Report": {
+      "title": "IncidentReport",
+      "description": "Un reporte de incidencia de servicios públicos ingresado por un vecino.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "ID exclusivo autogenerado." },
+        "category": { "type": "string", "enum": ["Luminaria rota", "Bache", "Árbol caído", "Cable cortado", "Residuos especiales", "Otro"] },
+        "description": { "type": "string" },
+        "lat": { "type": "number" },
+        "lng": { "type": "number" },
+        "address": { "type": "string" },
+        "locality": { "type": "string" },
+        "status": { "type": "string", "enum": ["Reportado", "En Revisión", "En Cuadrilla", "Cerrado"] },
+        "photoUrl": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" },
+        "neighborName": { "type": "string" },
+        "neighborPhone": { "type": "string" },
+        "internalComments": { "type": "array" }
+      },
+      "required": ["category", "description", "lat", "lng", "address", "status", "createdAt", "updatedAt"]
+    },
+    "Admin": {
+      "title": "Admin",
+      "description": "Usuario coordinador municipal autorizado para auditar, comentar y actualizar estados.",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string" },
+        "role": { "type": "string" }
+      },
+      "required": ["email", "role"]
+    }
+  },
+  "firestore": {
+    "/reports/{reportId}": {
+      "schema": "Report",
+      "description": "Colección de reportes de incidencias visibles por vecinos y coordinadores."
+    },
+    "/admins/{adminId}": {
+      "schema": "Admin",
+      "description": "Colección de coordinadores autorizados del municipio."
+    }
+  }
+}
