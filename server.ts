@@ -94,27 +94,45 @@ const INITIAL_REPORTS: IncidentReport[] = [
   }
 ];
 
-// Helper to read database
-function readDatabase(): IncidentReport[] {
+// Helper to read and write database with robust in-memory caching
+let reportsCache: IncidentReport[] = [];
+
+function initDatabase() {
   try {
-    if (!fs.existsSync(DB_FILE)) {
-      fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_REPORTS, null, 2), 'utf8');
-      return INITIAL_REPORTS;
+    if (fs.existsSync(DB_FILE)) {
+      const data = fs.readFileSync(DB_FILE, 'utf8');
+      reportsCache = JSON.parse(data);
+    } else {
+      reportsCache = [...INITIAL_REPORTS];
+      try {
+        fs.writeFileSync(DB_FILE, JSON.stringify(INITIAL_REPORTS, null, 2), 'utf8');
+      } catch (writeErr: any) {
+        console.warn('Could not write initial database file to disk (read-only filesystem assumed). Using in-memory mode.', writeErr.message);
+      }
     }
-    const data = fs.readFileSync(DB_FILE, 'utf8');
-    return JSON.parse(data);
   } catch (err) {
-    console.error('Error reading reports database:', err);
-    return INITIAL_REPORTS;
+    console.error('Error reading reports database from disk. Falling back to in-memory defaults:', err);
+    reportsCache = [...INITIAL_REPORTS];
   }
 }
 
-// Helper to write database
+// Initialize memory database immediately on load
+initDatabase();
+
+function readDatabase(): IncidentReport[] {
+  // Always return the in-memory cache for fast, reliable read access free of filesystem locks or failures
+  return reportsCache;
+}
+
 function writeDatabase(data: IncidentReport[]) {
+  // Update in-memory database cache instantly
+  reportsCache = [...data];
+  
+  // Attempt to persist to disk inside a non-blocking try-catch
   try {
     fs.writeFileSync(DB_FILE, JSON.stringify(data, null, 2), 'utf8');
-  } catch (err) {
-    console.error('Error writing reports database:', err);
+  } catch (err: any) {
+    console.warn('Non-blocking: Failed to persist database updates to disk:', err.message);
   }
 }
 

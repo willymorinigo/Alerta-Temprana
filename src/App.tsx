@@ -126,8 +126,14 @@ export default function App() {
       setSuccessSubmissionBanner(true);
       setTimeout(() => setSuccessSubmissionBanner(false), 5000);
     } else {
-      const errorData = await resp.json();
-      throw new Error(errorData.error || 'No se pudo registrar la incidencia.');
+      let errorMessage = 'No se pudo registrar la incidencia.';
+      try {
+        const errorData = await resp.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `Error del servidor (${resp.status}): El servidor no devolvió una respuesta válida. Si tu sesión expiró o estás navegando en un navegador con cookies de terceros bloqueadas, por favor recargá la página o permití las cookies.`;
+      }
+      throw new Error(errorMessage);
     }
   };
 
@@ -146,8 +152,14 @@ export default function App() {
       setReports((prev) => prev.map((r) => (r.id === id ? updated : r)));
       setSelectedReport(updated);
     } else {
-      const errorData = await resp.json();
-      throw new Error(errorData.error || 'No se pudo procesar la actualización.');
+      let errorMessage = 'No se pudo procesar la actualización.';
+      try {
+        const errorData = await resp.json();
+        errorMessage = errorData.error || errorMessage;
+      } catch (e) {
+        errorMessage = `Error del servidor (${resp.status}): No se pudo procesar la respuesta del servidor.`;
+      }
+      throw new Error(errorMessage);
     }
   };
 
