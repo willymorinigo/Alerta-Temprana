@@ -1,7 +1,6 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import { createServer as createViteServer } from 'vite';
 import { IncidentReport, IncidentCategory, IncidentStatus } from './src/types';
 
 const app = express();
@@ -343,23 +342,40 @@ ORDER BY distancia_metros ASC;
 });
 
 // Vite & Static assets router setup
+function serveStatic() {
+  const distPath = path.join(process.cwd(), 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+}
+
 async function init() {
-  if (process.env.NODE_ENV !== 'production') {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: 'spa',
-    });
-    app.use(vite.middlewares);
+  const currentDir = typeof __dirname !== 'undefined' ? __dirname : '';
+  const isProd = process.env.NODE_ENV === 'production' || 
+                 currentDir.includes('dist') || 
+                 !fs.existsSync(path.join(process.cwd(), 'server.ts'));
+
+  if (!isProd) {
+    try {
+      console.log('Iniciando en modo DESARROLLO con middleware de Vite...');
+      const { createServer: createViteServer } = await import('vite');
+      const vite = await createViteServer({
+        server: { middlewareMode: true },
+        appType: 'spa',
+      });
+      app.use(vite.middlewares);
+    } catch (e) {
+      console.error('Error cargando servidor de desarrollo de Vite, cayendo a modo estático:', e);
+      serveStatic();
+    }
   } else {
-    const distPath = path.join(process.cwd(), 'dist');
-    app.use(express.static(distPath));
-    app.get('*', (req, res) => {
-      res.sendFile(path.join(distPath, 'index.html'));
-    });
+    console.log('Iniciando en modo PRODUCCIÓN sirviendo archivos compilados...');
+    serveStatic();
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Brandsen Alerta Temprana Full-Stack Node Server listening on port ${PORT}`);
+    console.log(`Servidor Alerta Temprana de Brandsen escuchando en puerto ${PORT} (Producción: ${isProd})`);
   });
 }
 
